@@ -6,6 +6,7 @@ package gin
 
 import (
 	"bytes"
+	"math"
 	"net/url"
 	"strings"
 	"unicode"
@@ -405,11 +406,30 @@ type nodeValue struct {
 // made if a handle exists with an extra (without the) trailing slash for the
 // given path.
 func (n *node) getValue(path string, params *Params, unescape bool) (value nodeValue) {
-	var skipped *skip
+	var (
+		skipped *skip
+		nroot   = &(*n)                                // not found `level 1 router` use nroot
+		ldi     = len(strings.Split(path, "/")[1]) + 1 // level 1 router '/' index
+		ri      int                                    //record index
+	)
+
+	if len(path) == 1 {
+		ldi = 0
+	}
 
 walk: // Outer loop for walking the tree
 	for {
+
 		prefix := n.path
+
+		// level 1 router search end
+		if (strings.HasSuffix(prefix, "/") ||
+			n.indices == "/" ||
+			len(n.indices) == 0 ||
+			strings.Contains(n.fullPath, ":")) && len(prefix) > 1 {
+			ri = math.MaxUint8
+		}
+
 		if len(path) > len(prefix) {
 			if path[:len(prefix)] == prefix {
 				path = path[len(prefix):]
@@ -432,10 +452,14 @@ walk: // Outer loop for walking the tree
 								},
 							}
 						}
-
+						ri++
 						n = n.children[i]
 						continue walk
 					}
+				}
+
+				if ri < ldi {
+					n = nroot
 				}
 
 				// If there is no wildcard pattern, recommend a redirection
@@ -483,6 +507,8 @@ walk: // Outer loop for walking the tree
 						if len(n.children) > 0 {
 							path = path[end:]
 							n = n.children[0]
+							ri = math.MaxUint8
+							nroot = n
 							continue walk
 						}
 
@@ -535,6 +561,9 @@ walk: // Outer loop for walking the tree
 		}
 
 		if path == prefix {
+			if ri < ldi {
+				n = nroot.children[len(nroot.children)-1]
+			}
 			// We should have reached the node containing the handle.
 			// Check if this node has a handle registered.
 			if value.handlers = n.handlers; value.handlers != nil {

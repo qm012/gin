@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -22,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testRequest(t *testing.T, url string) {
+func testRequest(t *testing.T, params ...string) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
@@ -30,13 +31,18 @@ func testRequest(t *testing.T, url string) {
 	}
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(url)
+	resp, err := client.Get(params[0])
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
 	body, ioerr := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, ioerr)
-	assert.Equal(t, "it worked", string(body), "resp body should match")
+
+	var expected = "it worked"
+	if len(params) > 1 {
+		expected = params[1]
+	}
+	assert.Equal(t, expected, string(body), "resp body should match")
 	assert.Equal(t, "200 OK", resp.Status, "should get a 200")
 }
 
@@ -372,4 +378,43 @@ func testGetRequestHandler(t *testing.T, h http.Handler, url string) {
 
 	assert.Equal(t, "it worked", w.Body.String(), "resp body should match")
 	assert.Equal(t, 200, w.Code, "should get a 200")
+}
+
+func TestRunDynamicRouting(t *testing.T) {
+	router := New()
+	go func() {
+		router.GET("/aa/*xx", func(c *Context) { c.String(http.StatusOK, "/aa/*xx") })
+		router.GET("/ab/*xx", func(c *Context) { c.String(http.StatusOK, "/ab/*xx") })
+		router.GET("/:cc", func(c *Context) { c.String(http.StatusOK, "/:cc") })
+		router.GET("/:cc/cc", func(c *Context) { c.String(http.StatusOK, "/:cc/cc") })
+		router.GET("/get/test/abc/", func(c *Context) { c.String(http.StatusOK, "/get/test/abc/") })
+		router.GET("/get/:param/abc/", func(c *Context) { c.String(http.StatusOK, "/get/:param/abc/") })
+	}()
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	go func() {
+		err := router.RunListener(listener)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	}()
+
+	addr := listener.Addr().String()
+	addr = addr[strings.LastIndex(addr, ":"):]
+	testRequest(t, "http://localhost"+addr+"/aa/aa", "/aa/*xx")
+	testRequest(t, "http://localhost"+addr+"/ab/ab", "/ab/*xx")
+	testRequest(t, "http://localhost"+addr+"/all", "/:cc")
+	testRequest(t, "http://localhost"+addr+"/all/cc", "/:cc/cc")
+	testRequest(t, "http://localhost"+addr+"/a/cc", "/:cc/cc")
+	testRequest(t, "http://localhost"+addr+"/a", "/:cc")
+	testRequest(t, "http://localhost"+addr+"/get/test/abc/", "/get/test/abc/")
+	testRequest(t, "http://localhost"+addr+"/get/te/abc/", "/get/:param/abc/")
+	testRequest(t, "http://localhost"+addr+"/get/xx/abc/", "/get/:param/abc/")
+	testRequest(t, "http://localhost"+addr+"/get/tt/abc/", "/get/:param/abc/")
+	testRequest(t, "http://localhost"+addr+"/get/a/abc/", "/get/:param/abc/")
+	testRequest(t, "http://localhost"+addr+"/get/t/abc/", "/get/:param/abc/")
+	testRequest(t, "http://localhost"+addr+"/get/aa/abc/", "/get/:param/abc/")
+	testRequest(t, "http://localhost"+addr+"/get/abas/abc/", "/get/:param/abc/")
 }
