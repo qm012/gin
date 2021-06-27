@@ -6,6 +6,7 @@ package gin
 
 import (
 	"bytes"
+	"math"
 	"net/url"
 	"strings"
 	"unicode"
@@ -405,11 +406,34 @@ type nodeValue struct {
 // made if a handle exists with an extra (without the) trailing slash for the
 // given path.
 func (n *node) getValue(path string, params *Params, unescape bool) (value nodeValue) {
-	var skipped *skip
+	// path: /abc/123/def
+	// level 1 router:abc
+	// level 2 router:123
+	// level 3 router:def
+	var (
+		skipped    *skip
+		latestNode = &(*n) // not found `level 1 router` use latestNode
+
+		// match '/' count
+		// default root node n.path is '/' matchNum++
+		// matchNum <  2: `level 1 router` not found,the current node needs to be equal to latestNode
+		// matchNum >= 2: `level (2 or 3 or 4 or ...) router`: Normal handling
+		matchNum int // each match will accumulate
+	)
+	// if path = '/', no need to look for router
+	if len(path) == 1 {
+		matchNum = math.MaxUint8 / 2
+	}
 
 walk: // Outer loop for walking the tree
 	for {
 		prefix := n.path
+
+		// match '/', If this condition is matched, the next route is found
+		if strings.HasSuffix(n.path, "/") || strings.Contains(n.fullPath, ":") || n.path == "" {
+			matchNum++
+		}
+
 		if len(path) > len(prefix) {
 			if path[:len(prefix)] == prefix {
 				path = path[len(prefix):]
@@ -436,6 +460,10 @@ walk: // Outer loop for walking the tree
 						n = n.children[i]
 						continue walk
 					}
+				}
+				// level 1 router not found,the current node needs to be equal to latestNode
+				if matchNum < 2 {
+					n = latestNode
 				}
 
 				// If there is no wildcard pattern, recommend a redirection
@@ -483,6 +511,16 @@ walk: // Outer loop for walking the tree
 						if len(n.children) > 0 {
 							path = path[end:]
 							n = n.children[0]
+							// next node,the latestNode needs to be equal to currentNode and handle next router
+							latestNode = n
+							// not found router in (level 1 router and handle next node),skipped cannot execute
+							// example:
+							// * /:cc/cc
+							// call /a/cc 	     expectations:match/200      Actual:match/200
+							// call /a/dd 	     expectations:unmatch/404    Actual: panic
+							// call /addr/dd/aa  expectations:unmatch/404    Actual: panic
+							// skipped: It can only be executed if the secondary route is not found
+							skipped = nil
 							continue walk
 						}
 
@@ -533,8 +571,12 @@ walk: // Outer loop for walking the tree
 				}
 			}
 		}
-
+		// path = n.path
 		if path == prefix {
+			// level 1 router not found and latestNode.wildChild is ture
+			if matchNum < 2 && latestNode.wildChild {
+				n = latestNode.children[len(latestNode.children)-1]
+			}
 			// We should have reached the node containing the handle.
 			// Check if this node has a handle registered.
 			if value.handlers = n.handlers; value.handlers != nil {
