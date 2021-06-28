@@ -406,8 +406,7 @@ type nodeValue struct {
 // made if a handle exists with an extra (without the) trailing slash for the
 // given path.
 func (n *node) getValue(path string, params *Params, unescape bool) (value nodeValue) {
-
-	// /abc/123/def
+	// path: /abc/123/def
 	// level 1 router:abc
 	// level 2 router:123
 	// level 3 router:def
@@ -415,37 +414,34 @@ func (n *node) getValue(path string, params *Params, unescape bool) (value nodeV
 		skipped    *skip
 		latestNode = &(*n) // not found `level 1 router` use latestNode
 
-		// use level1RouterIndex and recordIndex Check whether it is in level 1 router
-		// level1RouterIndex >= matchNum  next router
-		// level1RouterIndex <  matchNum  locate to level 1 router
-		level1RouterIndex = len(strings.Split(path, "/")[1]) + 1 // level 1 router '/' index
-		matchNum          int                                    // each match will accumulate
+		// match '/' count
+		// default root node n.path is '/' matchNum++
+		// matchNum <  2: `level 1 router` not found,the current node needs to be equal to latestNode
+		// matchNum >= 2: `level (2 or 3 or 4 or ...) router`: Normal handling
+		matchNum int // each match will accumulate
 	)
-
-	// path is `/` level1RouterIndex is zero
+	// if path = '/', no need to look for router
 	if len(path) == 1 {
-		level1RouterIndex = 0
+		matchNum = math.MaxUint8 / 2
 	}
 
 walk: // Outer loop for walking the tree
 	for {
-
 		prefix := n.path
 
-		// level 1 router search end
-		if (strings.HasSuffix(prefix, "/") ||
-			n.indices == "/" ||
-			len(n.indices) == 0 ||
-			strings.Contains(n.fullPath, ":")) && len(prefix) > 1 {
-			matchNum = math.MaxUint8
+		// match '/'
+		if strings.HasSuffix(n.path, "/") || strings.Contains(n.fullPath, ":") || n.path == "" {
+			matchNum++
 		}
 
 		if len(path) > len(prefix) {
+
 			if path[:len(prefix)] == prefix {
 				path = path[len(prefix):]
 
 				// Try all the non-wildcard children first by matching the indices
 				idxc := path[0]
+
 				for i, c := range []byte(n.indices) {
 					if c == idxc {
 						if strings.HasPrefix(n.children[len(n.children)-1].path, ":") {
@@ -462,14 +458,13 @@ walk: // Outer loop for walking the tree
 								},
 							}
 						}
-						// match node
-						matchNum++
+
 						n = n.children[i]
 						continue walk
 					}
 				}
 				// level 1 router not found,the current node needs to be equal to latestNode
-				if matchNum < level1RouterIndex {
+				if matchNum < 2 {
 					n = latestNode
 				}
 
@@ -519,7 +514,6 @@ walk: // Outer loop for walking the tree
 							path = path[end:]
 							n = n.children[0]
 							// next node,the latestNode needs to be equal to currentNode and handle next router
-							matchNum = math.MaxUint8
 							latestNode = n
 							// not found router in (level 1 router and handle next node),skipped cannot execute
 							// example:
@@ -582,7 +576,7 @@ walk: // Outer loop for walking the tree
 		// path = n.path
 		if path == prefix {
 			// level 1 router not found and latestNode.wildChild is ture
-			if matchNum < level1RouterIndex && latestNode.wildChild {
+			if matchNum < 2 && latestNode.wildChild {
 				n = latestNode.children[len(latestNode.children)-1]
 			}
 			// We should have reached the node containing the handle.
