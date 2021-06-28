@@ -23,7 +23,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// params[0]=url example:http://127.0.0.1:8080/index (cannot be empty)
+// params[1]=response body (custom compare content)
 func testRequest(t *testing.T, params ...string) {
+
+	if len(params) == 0 {
+		t.Fatal("url cannot be empty")
+	}
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

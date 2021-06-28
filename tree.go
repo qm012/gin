@@ -406,15 +406,25 @@ type nodeValue struct {
 // made if a handle exists with an extra (without the) trailing slash for the
 // given path.
 func (n *node) getValue(path string, params *Params, unescape bool) (value nodeValue) {
+
+	// /abc/123/def
+	// level 1 router:abc
+	// level 2 router:123
+	// level 3 router:def
 	var (
-		skipped *skip
-		nroot   = &(*n)                                // not found `level 1 router` use nroot
-		ldi     = len(strings.Split(path, "/")[1]) + 1 // level 1 router '/' index
-		ri      int                                    //record index
+		skipped    *skip
+		latestNode = &(*n) // not found `level 1 router` use latestNode
+
+		// use level1RouterIndex and recordIndex Check whether it is in level 1 router
+		// level1RouterIndex >= matchNum  next router
+		// level1RouterIndex <  matchNum  locate to level 1 router
+		level1RouterIndex = len(strings.Split(path, "/")[1]) + 1 // level 1 router '/' index
+		matchNum          int                                    // each match will accumulate
 	)
 
+	// path is `/` level1RouterIndex is zero
 	if len(path) == 1 {
-		ldi = 0
+		level1RouterIndex = 0
 	}
 
 walk: // Outer loop for walking the tree
@@ -427,7 +437,7 @@ walk: // Outer loop for walking the tree
 			n.indices == "/" ||
 			len(n.indices) == 0 ||
 			strings.Contains(n.fullPath, ":")) && len(prefix) > 1 {
-			ri = math.MaxUint8
+			matchNum = math.MaxUint8
 		}
 
 		if len(path) > len(prefix) {
@@ -452,14 +462,15 @@ walk: // Outer loop for walking the tree
 								},
 							}
 						}
-						ri++
+						// match node
+						matchNum++
 						n = n.children[i]
 						continue walk
 					}
 				}
-
-				if ri < ldi {
-					n = nroot
+				// level 1 router not found,the current node needs to be equal to latestNode
+				if matchNum < level1RouterIndex {
+					n = latestNode
 				}
 
 				// If there is no wildcard pattern, recommend a redirection
@@ -507,8 +518,11 @@ walk: // Outer loop for walking the tree
 						if len(n.children) > 0 {
 							path = path[end:]
 							n = n.children[0]
-							ri = math.MaxUint8
-							nroot = n
+							// next node,the latestNode needs to be equal to currentNode and handle next router
+							matchNum = math.MaxUint8
+							latestNode = n
+							// handle next router not found router，skipped cannot execute
+							skipped = nil
 							continue walk
 						}
 
@@ -559,10 +573,11 @@ walk: // Outer loop for walking the tree
 				}
 			}
 		}
-
+		// path = n.path
 		if path == prefix {
-			if ri < ldi {
-				n = nroot.children[len(nroot.children)-1]
+			// level 1 router not found and latestNode.wildChild is ture
+			if matchNum < level1RouterIndex && latestNode.wildChild {
+				n = latestNode.children[len(latestNode.children)-1]
 			}
 			// We should have reached the node containing the handle.
 			// Check if this node has a handle registered.
