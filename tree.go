@@ -521,7 +521,7 @@ walk: // Outer loop for walking the tree
 							// next node,the latestNode needs to be equal to currentNode and handle next router
 							matchNum = math.MaxUint8
 							latestNode = n
-							// handle next router not found router，skipped cannot execute
+							// not found router in (level 1 router and handle next node),skipped cannot execute
 							skipped = nil
 							continue walk
 						}
