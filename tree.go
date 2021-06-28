@@ -522,6 +522,12 @@ walk: // Outer loop for walking the tree
 							matchNum = math.MaxUint8
 							latestNode = n
 							// not found router in (level 1 router and handle next node),skipped cannot execute
+							// example:
+							// * /:cc/cc
+							// call /a/cc 	     expectations:match/200      Actual:match/200
+							// call /a/dd 	     expectations:unmatch/404    Actual: panic
+							// call /addr/dd/aa  expectations:unmatch/404    Actual: panic
+							// skipped: It can only be executed if the secondary route is not found
 							skipped = nil
 							continue walk
 						}
