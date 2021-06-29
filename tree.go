@@ -6,7 +6,6 @@ package gin
 
 import (
 	"bytes"
-	"math"
 	"net/url"
 	"strings"
 	"unicode"
@@ -422,7 +421,7 @@ func (n *node) getValue(path string, params *Params, unescape bool) (value nodeV
 	)
 	// if path = '/', no need to look for router
 	if len(path) == 1 {
-		matchNum = math.MaxUint8 / 2
+		matchNum = 2
 	}
 
 walk: // Outer loop for walking the tree

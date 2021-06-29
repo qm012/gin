@@ -390,6 +390,7 @@ func TestRunDynamicRouting(t *testing.T) {
 	router := New()
 	router.GET("/aa/*xx", func(c *Context) { c.String(http.StatusOK, "/aa/*xx") })
 	router.GET("/ab/*xx", func(c *Context) { c.String(http.StatusOK, "/ab/*xx") })
+	router.GET("/", func(c *Context) { c.String(http.StatusOK, "home") })
 	router.GET("/:cc", func(c *Context) { c.String(http.StatusOK, "/:cc") })
 	router.GET("/:cc/cc", func(c *Context) { c.String(http.StatusOK, "/:cc/cc") })
 	router.GET("/get/test/abc/", func(c *Context) { c.String(http.StatusOK, "/get/test/abc/") })
@@ -398,6 +399,7 @@ func TestRunDynamicRouting(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
+	testRequest(t, ts.URL+"/", "home")
 	testRequest(t, ts.URL+"/aa/aa", "/aa/*xx")
 	testRequest(t, ts.URL+"/ab/ab", "/ab/*xx")
 	testRequest(t, ts.URL+"/all", "/:cc")
