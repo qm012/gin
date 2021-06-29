@@ -429,19 +429,17 @@ walk: // Outer loop for walking the tree
 	for {
 		prefix := n.path
 
-		// match '/'
+		// match '/', If this condition is matched, the next route is found
 		if strings.HasSuffix(n.path, "/") || strings.Contains(n.fullPath, ":") || n.path == "" {
 			matchNum++
 		}
 
 		if len(path) > len(prefix) {
-
 			if path[:len(prefix)] == prefix {
 				path = path[len(prefix):]
 
 				// Try all the non-wildcard children first by matching the indices
 				idxc := path[0]
-
 				for i, c := range []byte(n.indices) {
 					if c == idxc {
 						if strings.HasPrefix(n.children[len(n.children)-1].path, ":") {

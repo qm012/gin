@@ -15,7 +15,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -389,39 +388,28 @@ func testGetRequestHandler(t *testing.T, h http.Handler, url string) {
 
 func TestRunDynamicRouting(t *testing.T) {
 	router := New()
-	go func() {
-		router.GET("/aa/*xx", func(c *Context) { c.String(http.StatusOK, "/aa/*xx") })
-		router.GET("/ab/*xx", func(c *Context) { c.String(http.StatusOK, "/ab/*xx") })
-		router.GET("/:cc", func(c *Context) { c.String(http.StatusOK, "/:cc") })
-		router.GET("/:cc/cc", func(c *Context) { c.String(http.StatusOK, "/:cc/cc") })
-		router.GET("/get/test/abc/", func(c *Context) { c.String(http.StatusOK, "/get/test/abc/") })
-		router.GET("/get/:param/abc/", func(c *Context) { c.String(http.StatusOK, "/get/:param/abc/") })
-	}()
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	go func() {
-		err := router.RunListener(listener)
-		if err != nil {
-			t.Fatal(err.Error())
-		}
-	}()
+	router.GET("/aa/*xx", func(c *Context) { c.String(http.StatusOK, "/aa/*xx") })
+	router.GET("/ab/*xx", func(c *Context) { c.String(http.StatusOK, "/ab/*xx") })
+	router.GET("/:cc", func(c *Context) { c.String(http.StatusOK, "/:cc") })
+	router.GET("/:cc/cc", func(c *Context) { c.String(http.StatusOK, "/:cc/cc") })
+	router.GET("/get/test/abc/", func(c *Context) { c.String(http.StatusOK, "/get/test/abc/") })
+	router.GET("/get/:param/abc/", func(c *Context) { c.String(http.StatusOK, "/get/:param/abc/") })
 
-	addr := listener.Addr().String()
-	addr = addr[strings.LastIndex(addr, ":"):]
-	testRequest(t, "http://localhost"+addr+"/aa/aa", "/aa/*xx")
-	testRequest(t, "http://localhost"+addr+"/ab/ab", "/ab/*xx")
-	testRequest(t, "http://localhost"+addr+"/all", "/:cc")
-	testRequest(t, "http://localhost"+addr+"/all/cc", "/:cc/cc")
-	testRequest(t, "http://localhost"+addr+"/a/cc", "/:cc/cc")
-	testRequest(t, "http://localhost"+addr+"/a", "/:cc")
-	testRequest(t, "http://localhost"+addr+"/get/test/abc/", "/get/test/abc/")
-	testRequest(t, "http://localhost"+addr+"/get/te/abc/", "/get/:param/abc/")
-	testRequest(t, "http://localhost"+addr+"/get/xx/abc/", "/get/:param/abc/")
-	testRequest(t, "http://localhost"+addr+"/get/tt/abc/", "/get/:param/abc/")
-	testRequest(t, "http://localhost"+addr+"/get/a/abc/", "/get/:param/abc/")
-	testRequest(t, "http://localhost"+addr+"/get/t/abc/", "/get/:param/abc/")
-	testRequest(t, "http://localhost"+addr+"/get/aa/abc/", "/get/:param/abc/")
-	testRequest(t, "http://localhost"+addr+"/get/abas/abc/", "/get/:param/abc/")
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	testRequest(t, ts.URL+"/aa/aa", "/aa/*xx")
+	testRequest(t, ts.URL+"/ab/ab", "/ab/*xx")
+	testRequest(t, ts.URL+"/all", "/:cc")
+	testRequest(t, ts.URL+"/all/cc", "/:cc/cc")
+	testRequest(t, ts.URL+"/a/cc", "/:cc/cc")
+	testRequest(t, ts.URL+"/a", "/:cc")
+	testRequest(t, ts.URL+"/get/test/abc/", "/get/test/abc/")
+	testRequest(t, ts.URL+"/get/te/abc/", "/get/:param/abc/")
+	testRequest(t, ts.URL+"/get/xx/abc/", "/get/:param/abc/")
+	testRequest(t, ts.URL+"/get/tt/abc/", "/get/:param/abc/")
+	testRequest(t, ts.URL+"/get/a/abc/", "/get/:param/abc/")
+	testRequest(t, ts.URL+"/get/t/abc/", "/get/:param/abc/")
+	testRequest(t, ts.URL+"/get/aa/abc/", "/get/:param/abc/")
+	testRequest(t, ts.URL+"/get/abas/abc/", "/get/:param/abc/")
 }
