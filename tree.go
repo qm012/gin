@@ -409,7 +409,6 @@ func (n *node) getValue(path string, params *Params, unescape bool) (value nodeV
 		latestNode  = n // not found `level 2 router` use latestNode
 
 		// match '/' count
-		// default root node n.path is '/' matchNum++
 		// matchNum <  1: `level 2 router` not found,the current node needs to be equal to latestNode
 		// matchNum >= 1: `level (2 or 3 or 4 or ...) router`: Normal handling
 		matchNum int // each match will accumulate
@@ -447,7 +446,7 @@ walk: // Outer loop for walking the tree
 						n = n.children[i]
 
 						// match '/', If this condition is matched, the next route is found
-						if n.wildChild && strings.Contains(n.fullPath, "/") {
+						if len(n.fullPath) != 0 && n.wildChild {
 							matchNum++
 						}
 						continue walk
