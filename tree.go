@@ -415,24 +415,18 @@ func (n *node) getValue(path string, params *Params, unescape bool) (value nodeV
 
 		// match '/' count
 		// default root node n.path is '/' matchNum++
-		// matchNum <  2: `level 2 router` not found,the current node needs to be equal to latestNode
-		// matchNum >= 2: `level (2 or 3 or 4 or ...) router`: Normal handling
+		// matchNum <  1: `level 2 router` not found,the current node needs to be equal to latestNode
+		// matchNum >= 1: `level (2 or 3 or 4 or ...) router`: Normal handling
 		matchNum int // each match will accumulate
 	)
 	// if path = '/', no need to look for router
 	if len(path) == 1 {
-		matchNum = 2
+		matchNum = 1
 	}
 
 walk: // Outer loop for walking the tree
 	for {
 		prefix := n.path
-
-		// match '/', If this condition is matched, the next route is found
-		if strings.HasSuffix(n.path, "/") || strings.Contains(n.fullPath, ":") || n.path == "" {
-			matchNum++
-		}
-
 		if len(path) > len(prefix) {
 			if path[:len(prefix)] == prefix {
 				path = path[len(prefix):]
@@ -457,11 +451,17 @@ walk: // Outer loop for walking the tree
 						}
 
 						n = n.children[i]
+
+						// match '/', If this condition is matched, the next route is found
+						if strings.Contains(n.fullPath, "/") && n.wildChild {
+							matchNum++
+						}
 						continue walk
 					}
 				}
+
 				// level 2 router not found,the current node needs to be equal to latestNode
-				if matchNum < 2 {
+				if matchNum < 1 {
 					n = latestNode
 				}
 
@@ -573,7 +573,7 @@ walk: // Outer loop for walking the tree
 		// path = n.path
 		if path == prefix {
 			// level 2 router not found and latestNode.wildChild is ture
-			if matchNum < 2 && latestNode.wildChild {
+			if matchNum < 1 && latestNode.wildChild {
 				n = latestNode.children[len(latestNode.children)-1]
 			}
 			// We should have reached the node containing the handle.
