@@ -446,7 +446,7 @@ walk: // Outer loop for walking the tree
 						n = n.children[i]
 
 						// match '/', If this condition is matched, the next route is found
-						if len(n.fullPath) != 0 && n.wildChild {
+						if n.wildChild && len(n.fullPath) != 0 {
 							matchNum++
 						}
 						continue walk
