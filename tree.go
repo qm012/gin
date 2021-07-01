@@ -414,7 +414,7 @@ func (n *node) getValue(path string, params *Params, unescape bool) (value nodeV
 		matchNum int // each match will accumulate
 	)
 	// if path == "/", no need to look for router
-	if path == "/" {
+	if len(path) == 1 {
 		matchNum = 1
 	}
 
