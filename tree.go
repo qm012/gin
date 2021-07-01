@@ -414,16 +414,16 @@ func (n *node) getValue(path string, params *Params, unescape bool) (value nodeV
 		matchNum int // each match will accumulate
 	)
 	// if path == "/", no need to look for router
-	//if path == "/" {
-	//	matchNum = 1
-	//}
+	if path == "/" {
+		matchNum = 1
+	}
 
 walk: // Outer loop for walking the tree
 	for {
 		prefix := n.path
-		if path == "/" {
-			matchNum = 1
-		}
+		//if path == "/" {
+		//	matchNum = 1
+		//}
 		if len(path) > len(prefix) {
 			if path[:len(prefix)] == prefix {
 				path = path[len(prefix):]
