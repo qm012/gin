@@ -569,8 +569,7 @@ walk: // Outer loop for walking the tree
 		// path = n.path
 		if path == prefix {
 			// level 2 router not found and latestNode.wildChild is ture
-			//if matchNum < 1 && skippedPath != "/" && latestNode.wildChild {
-			if skippedPath != "/" && matchNum < 1 && latestNode.wildChild {
+			if matchNum < 1 && skippedPath != "/" && latestNode.wildChild {
 				n = latestNode.children[len(latestNode.children)-1]
 			}
 			// We should have reached the node containing the handle.
