@@ -405,7 +405,7 @@ func (n *node) getValue(path string, params *Params, unescape bool) (value nodeV
 	// level 2 router:123
 	// level 3 router:def
 	var (
-		skippedPath = path
+		skippedPath string
 		latestNode  = n // not found `level 2 router` use latestNode
 
 		// match '/' count
@@ -414,16 +414,13 @@ func (n *node) getValue(path string, params *Params, unescape bool) (value nodeV
 		matchNum int // each match will accumulate
 	)
 	// if path == "/", no need to look for router
-	//if len(path) == 1 {
-	//	matchNum = 1
-	//}
+	if len(path) == 1 {
+		matchNum = 1
+	}
 
 walk: // Outer loop for walking the tree
 	for {
 		prefix := n.path
-		//if path == "/" {
-		//	matchNum = 1
-		//}
 		if len(path) > len(prefix) {
 			if path[:len(prefix)] == prefix {
 				path = path[len(prefix):]
@@ -569,7 +566,7 @@ walk: // Outer loop for walking the tree
 		// path = n.path
 		if path == prefix {
 			// level 2 router not found and latestNode.wildChild is ture
-			if matchNum < 1 && len(skippedPath) != 1 && latestNode.wildChild {
+			if matchNum < 1 && latestNode.wildChild {
 				n = latestNode.children[len(latestNode.children)-1]
 			}
 			// We should have reached the node containing the handle.
@@ -601,7 +598,8 @@ walk: // Outer loop for walking the tree
 			return
 		}
 
-		if path != "/" && strings.HasSuffix(skippedPath, path) {
+		//if path != "/" && strings.HasSuffix(skippedPath, path) {
+		if path != "/" {
 			path = skippedPath
 			n = latestNode
 			skippedPath = ""
