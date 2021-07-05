@@ -600,7 +600,7 @@ walk: // Outer loop for walking the tree
 			return
 		}
 
-		if path != "/" && skippedPath != "" {
+		if skippedPath != "" && path != "/" {
 			path = skippedPath
 			n = latestNode
 			skippedPath = ""
