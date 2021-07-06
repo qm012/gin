@@ -474,7 +474,7 @@ walk: // Outer loop for walking the tree
 				case param:
 					// fix `level 1 router` truncate the prefix parameter
 					// tree_test.go  line: 204
-					if matchNum < 1 && prefix != "/" {
+					if prefix != "/" && matchNum < 1 {
 						path = prefix + path
 					}
 					// Find param end (either '/' or path end)
