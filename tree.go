@@ -472,10 +472,14 @@ walk: // Outer loop for walking the tree
 
 				switch n.nType {
 				case param:
+					// fix `level 1 router` truncate the prefix parameter
+					// tree_test.go  line: 204
+					if matchNum < 1 && prefix != "/" {
+						path = prefix + path
+					}
 					// Find param end (either '/' or path end)
-					end := 0
-					for end < len(path) && path[end] != '/' {
-						end++
+					var end int
+					for ; end < len(path) && path[end] != '/'; end++ {
 					}
 
 					// Save param value

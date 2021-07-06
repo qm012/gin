@@ -203,9 +203,13 @@ func TestTreeWildcard(t *testing.T) {
 		{"/a", false, "/:cc", Params{Param{Key: "cc", Value: "a"}}},
 		// * level 1 router match param will be Intercept first
 		// new PR handle (/all /all/cc /a/cc)
-		{"/all", false, "/:cc", Params{Param{Key: "cc", Value: "ll"}}},
-		{"/all/cc", false, "/:cc/cc", Params{Param{Key: "cc", Value: "ll"}}},
-		{"/a/cc", false, "/:cc/cc", Params{Param{Key: "cc", Value: ""}}},
+		{"/all", false, "/:cc", Params{Param{Key: "cc", Value: "all"}}},
+		{"/all/cc", false, "/:cc/cc", Params{Param{Key: "cc", Value: "all"}}},
+		{"/a/cc", false, "/:cc/cc", Params{Param{Key: "cc", Value: "a"}}},
+		{"/cc/cc", false, "/:cc/cc", Params{Param{Key: "cc", Value: "cc"}}},
+		{"/ccc/cc", false, "/:cc/cc", Params{Param{Key: "cc", Value: "ccc"}}},
+		{"/deedwjfs/cc", false, "/:cc/cc", Params{Param{Key: "cc", Value: "deedwjfs"}}},
+		{"/acllcc/cc", false, "/:cc/cc", Params{Param{Key: "cc", Value: "acllcc"}}},
 		{"/get/test/abc/", false, "/get/test/abc/", nil},
 		{"/get/te/abc/", false, "/get/:param/abc/", Params{Param{Key: "param", Value: "te"}}},
 		{"/get/xx/abc/", false, "/get/:param/abc/", Params{Param{Key: "param", Value: "xx"}}},
