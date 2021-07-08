@@ -600,7 +600,7 @@ walk: // Outer loop for walking the tree
 			return
 		}
 
-		if path != "/" && len(skippedPath) > 0 && strings.HasSuffix(skippedPath, path) {
+		if len(path) != 1 && len(skippedPath) > 0 && strings.HasSuffix(skippedPath, path) {
 			path = skippedPath
 			n = latestNode
 			skippedPath = ""
